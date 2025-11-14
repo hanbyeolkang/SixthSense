@@ -67,7 +67,7 @@ username / password 는 적당히 변경해서 사용
     docker compose restart superset
 
 ## 6. 서로 다른 브라우저에서 실행 확인
-    http://localhost:8080
+    http://localhost:8081
     http://localhost:8088
 
 
