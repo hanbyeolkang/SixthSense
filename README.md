@@ -13,7 +13,8 @@ DE7 3차 프로젝트 - End-to-end 데이터 파이프라인 구성하기
     docker compose up -d
 
 ## 4. Airflow 초기 설정
-airflow-init 실행 후, airflow-webserver 가 실행되면..
+airflow-init 실행 후, airflow-webserver 가 실행되면..  
+username / password 는 적당히 변경해서 사용
 
     docker compose exec airflow-webserver airflow users create \
         --username admin \
@@ -24,6 +25,8 @@ airflow-init 실행 후, airflow-webserver 가 실행되면..
         --password admin
 
 ## 5. Superset 초기 설정
+username / password 는 적당히 변경해서 사용
+
     docker compose exec superset superset fab create-admin \
         --username admin \
         --firstname admin \
