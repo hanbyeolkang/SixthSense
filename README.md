@@ -11,20 +11,19 @@ DE7 3차 프로젝트 - End-to-end 데이터 파이프라인 구성하기
     ├── airflow/                     # Airflow 관련
     │   ├── Dockerfile
     │   ├── requirements.txt
-    │   ├── dags/                    # DAG 파일
-    │   └── plugins/                 # DAG 실행에 필요한 plugins
+    │   ├── dags/
+    │   └── plugins/
     │
     ├── dbt/                         # dbt 관련
-    │   ├── Dockerfile
-    │   ├── profiles.yml             # Redshift 연결 설정
-    │   ├── dbt_project.yml          # dbt 프로젝트 설정
-    │   └── models/                  # SQL 변환 로직
+    │   ├── profiles.yml
+    │   ├── dbt_project.yml
+    │   └── models/
     │       ├── staging/             # 1단계: 정제
     │       │   └── sources.yml
     │       ├── intermediate/        # 2단계: 중간 변환
     │       └── marts/               # 3단계: 최종 분석용
     │ 
-    └── superset/                    # Superset 설정
+    └── superset/                    # Superset 관련
         ├── Dockerfile
         └── superset_config.py
 
