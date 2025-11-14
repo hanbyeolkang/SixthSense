@@ -5,3 +5,4 @@ pandas==2.1.4
 requests==2.31.0
 python-dotenv==1.0.0
 slack-sdk==3.26.2
+dbt-redshift==1.7.5
