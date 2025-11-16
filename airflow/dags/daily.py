@@ -14,7 +14,7 @@ def gen_url(dt):
     return url
 
 def get_key():
-    key = Variable.get('MOVIE_API_KEY')
+    key="cfbd1e13aaf5a9e9666f23434e6bdc1c"  
     return key
 
 def req(dt):
@@ -44,6 +44,11 @@ def get_daily_df(load_dt) -> pd.DataFrame:
             print("데이터 없음")
             return pd.DataFrame()
         df=pd.DataFrame(movie_list)
+        
+        # 상위 레벨의 정보 추가
+        df['boxofficeType']=data['boxOfficeResult'].get('boxofficeType', '')
+        df['showRange']=data['boxOfficeResult'].get('showRange', '')
+        
         return df
     else:
         print("예상한 데이터 구조 없음")
@@ -63,7 +68,7 @@ def transform(df, load_dt):
 @dag(
     dag_id="daily_to_s3",
     start_date=pendulum.datetime(2025, 10, 1, tz="Asia/Seoul"),
-    schedule_interval="0 8 * * *",  # 매일 오전 8:00 (KST) 실행
+    schedule_interval="0 8 * * *",  
     catchup=False,
     tags=["daily", "s3"]
 )
