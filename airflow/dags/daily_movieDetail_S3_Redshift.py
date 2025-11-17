@@ -22,7 +22,7 @@ postgres_conn_id='redshift_default'
 
 s3_bucket=Variable.get("DE7_SIXTHSENSE_BUCKET")
 s3_prefix="movie_details"
-redshift_schema="public"
+redshift_schema="raw_data"
 redshift_table="movie_details"
 REDSHIFT_IAM_ROLE = Variable.get("REDSHIFT_IAM_ROLE")
 
