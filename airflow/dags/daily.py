@@ -8,9 +8,9 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 # Airflow Variable에서 설정값 로드
-KOBIS_API_KEY = Variable.get('KOBIS_API_KEY')
-S3_BUCKET_NAME = Variable.get('S3_BUCKET_NAME')
-AWS_CONN_ID = Variable.get('AWS_CONN_ID', 'aws_default')
+KOBIS_API_KEY = Variable.get('MOVIE_API_KEY')
+S3_BUCKET_NAME = Variable.get('DE7_SIXTHSENSE_BUCKET')
+AWS_CONN_ID = 'S3_CONN_ID'
 
 def gen_url(dt):
     base_url="http://www.kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchDailyBoxOfficeList.json"
