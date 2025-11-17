@@ -10,11 +10,14 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 aws_conn_id='S3_CONN_ID'
 date="20150101"
 postgres_conn_id='redshift_default'
+weekGb="0" 
+# “0” : 주간 (월~일), “1” : 주말 (금~일) , “2” : 주중 (월~목)
 
 def gen_url(dt=date):
     base_url="http://www.kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchWeeklyBoxOfficeList.json"
     key=get_key()
-    url=f"{base_url}?key={key}&targetDt={dt}"
+    weekGb=weekGb
+    url=f"{base_url}?key={key}&targetDt={dt}&weekGb={weekGb}"
     return url
 
 def get_key():

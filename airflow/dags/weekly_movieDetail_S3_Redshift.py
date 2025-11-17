@@ -26,6 +26,9 @@ redshift_schema="public"
 redshift_table="movie_details"
 REDSHIFT_IAM_ROLE = Variable.get("REDSHIFT_IAM_ROLE")
 
+weekGb="0" 
+# “0” : 주간 (월~일), “1” : 주말 (금~일) , “2” : 주중 (월~목)
+
 kobis_api_key=Variable.get('MOVIE_API_KEY')
 kobis_weekly_url="http://kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchWeeklyBoxOfficeList.json"
 kobis_detail_url="http://www.kobis.or.kr/kobisopenapi/webservice/rest/movie/searchMovieInfo.json"
@@ -65,7 +68,7 @@ def weekly_movieDetail_S3_Redshift():
     def get_weekly_movie_list(target_dt):
 
         
-        params = {"key": kobis_api_key, "targetDt": target_dt}
+        params = {"key": kobis_api_key, "targetDt": target_dt, "weekGb":weekGb}
 
         response=requests.get(kobis_weekly_url, params=params)
         response.raise_for_status()
