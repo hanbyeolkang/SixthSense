@@ -1,24 +1,16 @@
 from airflow.decorators import dag, task 
-from dotenv import load_dotenv
-from pathlib import Path
+from airflow.models import Variable
+from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 import pendulum
 import io 
 import requests
 import pandas as pd
-import os
-import boto3
 from datetime import datetime, timedelta
 
-# dotenv 로드
-dotenv_path = Path(__file__).parent.parent / '.env'
-load_dotenv(dotenv_path=dotenv_path)
-
-# 환경변수에서 설정값 로드
-KOBIS_API_KEY = os.getenv('KOBIS_API_KEY')
-S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')
-AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
-AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
-AWS_DEFAULT_REGION = os.getenv('AWS_DEFAULT_REGION', 'ap-northeast-2')
+# Airflow Variable에서 설정값 로드
+KOBIS_API_KEY = Variable.get('KOBIS_API_KEY')
+S3_BUCKET_NAME = Variable.get('S3_BUCKET_NAME')
+AWS_CONN_ID = Variable.get('AWS_CONN_ID', 'aws_default')
 
 def gen_url(dt):
     base_url="http://www.kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchDailyBoxOfficeList.json"
@@ -90,9 +82,6 @@ def total_pipeline():
     
     @task 
     def extract_and_transform(dt: str) -> dict:
-        print("AWS_ACCESS_KEY_ID:", AWS_ACCESS_KEY_ID)
-        print("AWS_SECRET_ACCESS_KEY:", AWS_SECRET_ACCESS_KEY)
-        print("S3_BUCKET_NAME:", S3_BUCKET_NAME)
         print(f"추출 시작: {dt}")
         df_raw=get_daily_df(dt)
         
@@ -103,22 +92,20 @@ def total_pipeline():
         df_transformed=transform(df_raw, dt)
         
         try:
-            # boto3 S3 클라이언트 생성
-            s3_client = boto3.client(
-                's3',
-                aws_access_key_id=AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-                region_name=AWS_DEFAULT_REGION
-            )
-            s3_key=f'staging/daily_{dt}.csv'
+            # S3Hook 사용 (Airflow Connection 이용)
+            s3_hook = S3Hook(aws_conn_id=AWS_CONN_ID)
+            s3_key = f'staging/daily_{dt}.csv'
             csv_buffer = io.BytesIO()
             df_transformed.to_csv(csv_buffer, index=False, encoding='utf-8-sig')
-            s3_client.put_object(
-                Bucket=S3_BUCKET_NAME,
-                Key=s3_key,
-                Body=csv_buffer.getvalue()
+            
+            s3_hook.load_bytes(
+                bytes_data=csv_buffer.getvalue(),
+                key=s3_key,
+                bucket_name=S3_BUCKET_NAME,
+                replace=True
             )
             print(f"Staging 저장 성공: {s3_key}")
+            print(f"Bucket: {S3_BUCKET_NAME}, Key: {s3_key}")
             return {'staging_key': s3_key, 'dt': dt, 'success': True}
         except Exception as e:
             print(f"Staging 저장 실패: {e}")
@@ -134,30 +121,22 @@ def total_pipeline():
         dt = upstream_data.get('dt')
         
         try:
-            s3_client = boto3.client(
-                's3',
-                aws_access_key_id=AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-                region_name=AWS_DEFAULT_REGION
-            )
-            processed_key=f'daily/daily_{dt}.csv'
+            s3_hook = S3Hook(aws_conn_id=AWS_CONN_ID)
+            processed_key = f'daily/daily_{dt}.csv'
             
             # staging 파일을 processed로 복사
-            copy_source = {
-                'Bucket': S3_BUCKET_NAME,
-                'Key': staging_key
-            }
-            s3_client.copy_object(
-                CopySource=copy_source,
-                Bucket=S3_BUCKET_NAME,
-                Key=processed_key
+            s3_hook.copy_object(
+                source_bucket_key=staging_key,
+                dest_bucket_key=processed_key,
+                source_bucket_name=S3_BUCKET_NAME,
+                dest_bucket_name=S3_BUCKET_NAME
             )
             print(f"Processed 저장 성공: {processed_key}")
             
             # staging 파일 삭제
-            s3_client.delete_object(
-                Bucket=S3_BUCKET_NAME,
-                Key=staging_key
+            s3_hook.delete_objects(
+                bucket=S3_BUCKET_NAME,
+                keys=[staging_key]
             )
             print(f"Staging 파일 삭제 완료: {staging_key}")
         except Exception as e:
