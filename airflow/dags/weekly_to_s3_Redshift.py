@@ -10,13 +10,13 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 aws_conn_id='S3_CONN_ID'
 date="20150101"
 postgres_conn_id='redshift_default'
-weekGb="0" 
-# “0” : 주간 (월~일), “1” : 주말 (금~일) , “2” : 주중 (월~목)
+# weekGb="0" 
 
-def gen_url(dt=date):
+
+def gen_url(weekGb,dt=date ):
     base_url="http://www.kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchWeeklyBoxOfficeList.json"
     key=get_key()
-    weekGb=weekGb
+    
     url=f"{base_url}?key={key}&targetDt={dt}&weekGb={weekGb}"
     return url
 
@@ -25,7 +25,9 @@ def get_key():
     return key
 
 def req(dt=date):
-    url=gen_url(dt)
+    weekGb_val=0
+    # “0” : 주간 (월~일), “1” : 주말 (금~일) , “2” : 주중 (월~목)
+    url=gen_url(weekGb_val,dt)
     r=requests.get(url)
     if not r:
         print("호출 실패")
@@ -74,6 +76,7 @@ def transform(df):
 ######### dag 시작 
 S3_BUCKET = Variable.get("DE7_SIXTHSENSE_BUCKET") 
 TABLE_NAME = "weekly_box_office"
+SCHEMA_NAME="raw_data"
 REDSHIFT_IAM_ROLE = Variable.get("REDSHIFT_IAM_ROLE")
 
 @dag(
@@ -136,7 +139,7 @@ def total_pipeline():
     def create_redshift_table():
         hook = PostgresHook(postgres_conn_id=postgres_conn_id) #variable 
         create_table_sql = f"""
-        CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
+        CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.{TABLE_NAME} (
             rnum VARCHAR(10),
             rank VARCHAR(10),
             rankInten VARCHAR(10),
@@ -177,11 +180,11 @@ def total_pipeline():
         hook = PostgresHook(postgres_conn_id=postgres_conn_id)
         
         
-        delete_sql = f"DELETE FROM {TABLE_NAME} WHERE load_dt = '{dt}';"
+        delete_sql = f"DELETE FROM {SCHEMA_NAME}.{TABLE_NAME} WHERE load_dt = '{dt}';"
         
         # S3 -> Redshift로 COPY
         copy_sql = f"""
-        COPY {TABLE_NAME}
+        COPY {SCHEMA_NAME}.{TABLE_NAME}
         FROM '{s3_path}'
         IAM_ROLE '{REDSHIFT_IAM_ROLE}'
         FORMAT AS CSV
