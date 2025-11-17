@@ -1,21 +1,33 @@
 from airflow.decorators import dag, task 
-from airflow.providers.amazon.aws.hooks.s3 import S3Hook
-from airflow.models import Variable
+from dotenv import load_dotenv
+from pathlib import Path
 import pendulum
 import io 
 import requests
 import pandas as pd
+import os
+import boto3
 from datetime import datetime, timedelta
+
+# dotenv 로드
+dotenv_path = Path(__file__).parent.parent / '.env'
+load_dotenv(dotenv_path=dotenv_path)
+
+# 환경변수에서 설정값 로드
+KOBIS_API_KEY = os.getenv('KOBIS_API_KEY')
+S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')
+AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+AWS_DEFAULT_REGION = os.getenv('AWS_DEFAULT_REGION', 'ap-northeast-2')
 
 def gen_url(dt):
     base_url="http://www.kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchDailyBoxOfficeList.json"
-    key="cfbd1e13aaf5a9e9666f23434e6bdc1c" 
+    key=KOBIS_API_KEY
     url=f"{base_url}?key={key}&targetDt={dt}"
     return url
 
 def get_key():
-    key="cfbd1e13aaf5a9e9666f23434e6bdc1c"  
-    return key
+    return KOBIS_API_KEY
 
 def req(dt):
     url=gen_url(dt)
@@ -68,7 +80,7 @@ def transform(df, load_dt):
 @dag(
     dag_id="daily_to_s3",
     start_date=pendulum.datetime(2025, 10, 1, tz="Asia/Seoul"),
-    schedule_interval="0 8 * * *",  
+    schedule_interval="0 8 * * *",  # 매일 오전 8:00 (KST) 실행
     catchup=False,
     tags=["daily", "s3"]
 )
@@ -78,6 +90,9 @@ def total_pipeline():
     
     @task 
     def extract_and_transform(dt: str) -> dict:
+        print("AWS_ACCESS_KEY_ID:", AWS_ACCESS_KEY_ID)
+        print("AWS_SECRET_ACCESS_KEY:", AWS_SECRET_ACCESS_KEY)
+        print("S3_BUCKET_NAME:", S3_BUCKET_NAME)
         print(f"추출 시작: {dt}")
         df_raw=get_daily_df(dt)
         
@@ -88,15 +103,20 @@ def total_pipeline():
         df_transformed=transform(df_raw, dt)
         
         try:
-            s3_hook=S3Hook(aws_conn_id='S3_CONN_ID')
+            # boto3 S3 클라이언트 생성
+            s3_client = boto3.client(
+                's3',
+                aws_access_key_id=AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+                region_name=AWS_DEFAULT_REGION
+            )
             s3_key=f'staging/daily_{dt}.csv'
             csv_buffer = io.BytesIO()
             df_transformed.to_csv(csv_buffer, index=False, encoding='utf-8-sig')
-            s3_hook.load_bytes(
-                bytes_data=csv_buffer.getvalue(),
-                key=s3_key,
-                bucket_name='de7-sixthsense',
-                replace=True
+            s3_client.put_object(
+                Bucket=S3_BUCKET_NAME,
+                Key=s3_key,
+                Body=csv_buffer.getvalue()
             )
             print(f"Staging 저장 성공: {s3_key}")
             return {'staging_key': s3_key, 'dt': dt, 'success': True}
@@ -114,21 +134,30 @@ def total_pipeline():
         dt = upstream_data.get('dt')
         
         try:
-            s3_hook=S3Hook(aws_conn_id='S3_CONN_ID')
+            s3_client = boto3.client(
+                's3',
+                aws_access_key_id=AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+                region_name=AWS_DEFAULT_REGION
+            )
             processed_key=f'daily/daily_{dt}.csv'
             
-            s3_hook.copy_object(
-                source_bucket_key=staging_key,
-                dest_bucket_key=processed_key,
-                source_bucket_name='de7-sixthsense',
-                dest_bucket_name='de7-sixthsense'
+            # staging 파일을 processed로 복사
+            copy_source = {
+                'Bucket': S3_BUCKET_NAME,
+                'Key': staging_key
+            }
+            s3_client.copy_object(
+                CopySource=copy_source,
+                Bucket=S3_BUCKET_NAME,
+                Key=processed_key
             )
             print(f"Processed 저장 성공: {processed_key}")
             
             # staging 파일 삭제
-            s3_hook.delete_objects(
-                bucket='de7-sixthsense',
-                keys=[staging_key]
+            s3_client.delete_object(
+                Bucket=S3_BUCKET_NAME,
+                Key=staging_key
             )
             print(f"Staging 파일 삭제 완료: {staging_key}")
         except Exception as e:
