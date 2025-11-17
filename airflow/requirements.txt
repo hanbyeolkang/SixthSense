@@ -6,3 +6,6 @@ requests==2.31.0
 python-dotenv==1.0.0
 slack-sdk==3.26.2
 dbt-redshift==1.7.5
+apache-airflow-providers-amazon
+apache-airflow-providers-common-sql
+apache-airflow-providers-postgres

@@ -17,4 +17,3 @@ COPY requirements.txt /requirements.txt
 RUN pip install --no-cache-dir -r /requirements.txt
 
 # dbt 설치
-RUN pip install --no-cache-dir dbt-redshift==1.7.0
