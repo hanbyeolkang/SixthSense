@@ -15,5 +15,3 @@ USER airflow
 # Python 패키지 복사 및 설치
 COPY requirements.txt /requirements.txt
 RUN pip install --no-cache-dir -r /requirements.txt
-
-# dbt 설치
