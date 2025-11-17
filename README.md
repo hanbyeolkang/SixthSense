@@ -72,5 +72,10 @@ username / password 는 적당히 변경해서 사용
 
 
 ### Airflow Variables 등록
-- username
-- slack_url
+- REDSHIFT_IAM_ROLE
+- MOVIE_API_KEY : 영화진흥위원회 OPEN API 키
+- DE7_SIXTHSENSE_BUCKET : S3 버킷명
+
+### Airflow Connections 등록 
+- redshift_default : redshift 연결 (!!!!!conncetion Type: Postgres !!!!!)
+- S3_CONN_ID: amazon web servie 연결 

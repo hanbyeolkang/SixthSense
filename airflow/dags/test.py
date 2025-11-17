@@ -7,12 +7,6 @@ from pathlib import Path
 import os
 import sys
 
-# 커스텀 플러그인 import
-sys.path.insert(0, '/opt/airflow/plugins')
-from kobis_api import KobisAPI
-from s3_utils import S3Manager
-from redshift_utils import RedshiftManager
-from slack_notifier import SlackNotifier
 
 # dotenv 로드 추가
 dotenv_path = Path(__file__).parent.parent / '.env'
