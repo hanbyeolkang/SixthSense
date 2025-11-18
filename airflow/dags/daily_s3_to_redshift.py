@@ -14,7 +14,7 @@ TABLE_NAME = "daily_boxoffice"
 @dag(
     dag_id="daily_s3_to_redshift",
     start_date=pendulum.datetime(2025, 10, 1, tz="Asia/Seoul"),
-    schedule_interval="@daily",
+    schedule_interval="10 8 * * *",
     catchup=False,
     tags=["redshift", "s3", "kobis"]
 )
