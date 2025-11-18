@@ -30,8 +30,8 @@ SELECT
     TRY_CAST(to_date(open_dt_raw, 'YYYYMMDD') AS date) AS open_dt,  -- 개봉일
     prdt_stat_nm,   -- 제작 상태
     type_nm,    -- 영화 유형
-    json_parse(nations_str) AS nations, -- 제작 국가
-    json_parse(genres_str) AS genres,   -- 장르
-    json_parse(directors_str) AS directors, -- 감독
-    json_parse(actors_str) AS actors    -- 배우
+    json_parse(COALESCE(nations_str, '[]')) AS nations, -- 제작 국가
+    json_parse(COALESCE(genres_str, '[]')) AS genres,   -- 장르
+    json_parse(COALESCE(directors_str, '[]')) AS directors, -- 감독
+    json_parse(COALESCE(actors_str, '[]')) AS actors    -- 배우
 FROM base;
