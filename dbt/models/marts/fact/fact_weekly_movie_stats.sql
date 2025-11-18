@@ -60,7 +60,6 @@ LEFT JOIN {{ ref('dim_movie') }} dm
 
 {% if is_incremental() %}
 WHERE w.year_week_time > (
-    SELECT max(year_week_time)
-    FROM {{ this }}
+    SELECT max(year_week_time) FROM {{ this }}
 )
 {% endif %}
