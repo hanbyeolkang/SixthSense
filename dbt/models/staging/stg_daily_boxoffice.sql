@@ -1,5 +1,4 @@
 -- 컬럼명 표준화(snake_case), 날짜 변환, 타입 캐스팅
-
 WITH base AS (
     SELECT
         boxofficetype    AS boxoffice_type,
@@ -25,7 +24,6 @@ WITH base AS (
         load_dt
     FROM {{ source('raw_data', 'daily_boxoffice') }}
 )
-
 SELECT
     show_range, -- 조회 일자 (문자열 원본)
     TRY_CAST(to_date(show_range, 'YYYYMMDD') AS date) AS dt,    -- 조회 일자 (FACT PK에 사용)
@@ -48,4 +46,4 @@ SELECT
     scrn_cnt,   -- 스크린 수
     show_cnt,   -- 상영 횟수
     TRY_CAST(load_dt AS date) AS load_dt    -- 데이터 적재일자
-FROM base;
+FROM base

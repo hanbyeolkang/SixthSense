@@ -1,7 +1,5 @@
 -- 컬럼명 표준화(snake_case), 날짜 변환, 타입 캐스팅
-
 WITH base AS (
-
     SELECT
         boxofficetype    AS boxoffice_type,
         showrange        AS show_range,
@@ -29,7 +27,6 @@ WITH base AS (
         load_dt
     FROM {{ source('raw_data', 'weekly_boxoffice') }}
 )
-
 SELECT
     show_range, -- 원본 주차 문자열 (YYYYMMDD ~ YYYYMMDD)
     year_week_time, -- 연도+주차
@@ -54,4 +51,4 @@ SELECT
     TRY_CAST(to_date(start_range_raw, 'YYYYMMDD') AS date) AS start_range,  -- 주차 시작일
     TRY_CAST(to_date(end_range_raw,   'YYYYMMDD') AS date) AS end_range,    -- 주차 종료일
     TRY_CAST(load_dt AS date) AS load_dt    -- 데이터 적재일자
-FROM base;
+FROM base
