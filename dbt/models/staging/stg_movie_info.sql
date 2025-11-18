@@ -13,10 +13,10 @@ WITH base AS (
         opendt       AS open_dt_raw,
         prdtstatnm   AS prdt_stat_nm,
         typenm       AS type_nm,
-        nations,
-        genres,
-        directors,
-        actors
+        nations      AS nations_str,
+        genres       AS genres_str,
+        directors    AS directors_str,
+        actors       AS actors_str
     FROM {{ source('raw_data', 'movie_details') }}
 )
 
@@ -30,8 +30,8 @@ SELECT
     TRY_CAST(to_date(open_dt_raw, 'YYYYMMDD') AS date) AS open_dt,  -- 개봉일
     prdt_stat_nm,   -- 제작 상태
     type_nm,    -- 영화 유형
-    nations,    -- 제작국가 배열
-    genres, -- 장르 배열
-    directors,  -- 감독 배열
-    actors  -- 배우 배열
+    json_parse(nations_str) AS nations, -- 제작 국가
+    json_parse(genres_str) AS genres,   -- 장르
+    json_parse(directors_str) AS directors, -- 감독
+    json_parse(actors_str) AS actors    -- 배우
 FROM base;
