@@ -51,6 +51,7 @@ def get_weekly_df(load_dt=date) -> pd.DataFrame:
         df=pd.DataFrame(movie_list)
         df['showRange']=data['boxOfficeResult']['showRange']
         df['yearWeekTime']=data['boxOfficeResult']['yearWeekTime']
+        df['boxofficeType'] = data['boxOfficeResult']['boxofficeType']
         return df
     else:
         return pd.DataFrame()
@@ -65,17 +66,50 @@ def save2df(load_dt=date):
 def transform(df):
     if df.empty:
         return df 
-    df[['startRange', 'endRange']]=df['showRange'].str.split('~', expand=True)
 
-    df['startRange']=pd.to_datetime(df['startRange'], format='%Y%m%d')
-    df['endRange']=pd.to_datetime(df['endRange'], format='%Y%m%d')
-    df = df.drop(columns=['showRange'])
-    return df 
+    # showRange → startRange, endRange
+    split_df = df['showRange'].str.split('~', expand=True)
+    df['startRange'] = pd.to_datetime(split_df[0], format='%Y%m%d', errors='coerce')
+    df['endRange']   = pd.to_datetime(split_df[1], format='%Y%m%d', errors='coerce')
+
+    # 날짜 변환
+    df['openDt'] = pd.to_datetime(df['openDt'], errors='coerce')
+
+    # 숫자 컬럼 daily와 동일하게 처리
+    numeric_cols = [
+        'rnum', 'rank', 'rankInten',
+        'salesAmt', 'salesShare', 'salesInten', 'salesChange', 'salesAcc',
+        'audiCnt', 'audiInten', 'audiChange', 'audiAcc',
+        'scrnCnt', 'showCnt'
+    ]
+    for col in numeric_cols:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+
+    # 최종 컬럼 세트(daily 구성 + weekly 전용 컬럼 포함)
+    cols_order = [
+        'boxofficeType', 'showRange', 'yearWeekTime',
+        'rnum', 'rank', 'rankInten', 'rankOldAndNew',
+        'movieCd', 'movieNm',
+        'openDt',
+        'salesAmt', 'salesShare', 'salesInten', 'salesChange', 'salesAcc',
+        'audiCnt', 'audiInten', 'audiChange', 'audiAcc',
+        'scrnCnt', 'showCnt',
+        'startRange', 'endRange',
+        'load_dt'
+    ]
+
+    # 누락 컬럼 보충
+    for col in cols_order:
+        if col not in df.columns:
+            df[col] = None
+
+    return df[cols_order]
 
 
 ######### dag 시작 
 S3_BUCKET = Variable.get("DE7_SIXTHSENSE_BUCKET") 
-TABLE_NAME = "weekly_box_office"
+TABLE_NAME = "weekly_boxoffice"
 SCHEMA_NAME="raw_data"
 REDSHIFT_IAM_ROLE = Variable.get("REDSHIFT_IAM_ROLE")
 
@@ -140,28 +174,30 @@ def total_pipeline():
         hook = PostgresHook(postgres_conn_id=postgres_conn_id) #variable 
         create_table_sql = f"""
         CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.{TABLE_NAME} (
-            rnum VARCHAR(10),
-            rank VARCHAR(10),
-            rankInten VARCHAR(10),
+            boxofficeType VARCHAR(50),
+            showRange VARCHAR(20),
+            yearWeekTime VARCHAR(20),
+            rnum INTEGER,
+            rank INTEGER,
+            rankInten INTEGER,
             rankOldAndNew VARCHAR(10),
             movieCd VARCHAR(20),
             movieNm VARCHAR(256),
             openDt VARCHAR(20),
             salesAmt BIGINT,
-            salesShare FLOAT,
+            salesShare DECIMAL(18,2),
             salesInten BIGINT,
-            salesChange FLOAT,
+            salesChange DECIMAL(18,2),
             salesAcc BIGINT,
             audiCnt BIGINT,
             audiInten BIGINT,
-            audiChange FLOAT,
+            audiChange DECIMAL(18,2),
             audiAcc BIGINT,
-            scrnCnt INT,
-            showCnt INT,
-            yearWeekTime VARCHAR(20),
-            load_dt VARCHAR(8),
-            startRange DATE,
-            endRange DATE
+            scrnCnt INTEGER,
+            showCnt INTEGER,
+            startRange VARCHAR(20),
+            endRange VARCHAR(20),
+            load_dt VARCHAR(20)
         );
         """
         hook.run(sql=create_table_sql)

@@ -60,25 +60,48 @@ def get_daily_df(load_dt) -> pd.DataFrame:
 
 def transform(df, load_dt):
     if df.empty:
-        return df 
-    df['load_dt']=load_dt
-    cols_to_select = ['boxofficeType', 'showRange', 'rnum', 'rank', 'rankInten', 'rankOldAndNew', 
-                    'openDt', 'salesAmt', 'salesShare', 'salesInten', 'salesChange', 'salesAcc', 
-                    'audiCnt', 'audiChange', 'scrnCnt', 'load_dt']
-    df = df[cols_to_select]
-    return df 
+        return df
+
+    df['load_dt'] = pd.to_datetime(load_dt, format='%Y%m%d')
+
+    # 날짜 변환
+    df['openDt'] = pd.to_datetime(df['openDt'], errors='coerce')
+
+    numeric_cols = [
+        'rnum', 'rank', 'rankInten',
+        'salesAmt', 'salesShare', 'salesInten', 'salesChange', 'salesAcc',
+        'audiCnt', 'audiInten', 'audiChange', 'audiAcc',
+        'scrnCnt', 'showCnt'
+    ]
+
+    for col in numeric_cols:
+        df[col] = pd.to_numeric(df[col], errors='coerce')
+
+    cols_to_select = [
+        'boxofficeType', 'showRange',
+        'rnum', 'rank', 'rankInten', 'rankOldAndNew',
+        'movieCd', 'movieNm',
+        'openDt',
+        'salesAmt', 'salesShare', 'salesInten', 'salesChange', 'salesAcc',
+        'audiCnt', 'audiInten', 'audiChange', 'audiAcc',
+        'scrnCnt', 'showCnt',
+        'load_dt'
+    ]
+
+    return df[cols_to_select]
+
 
 ## dag 
 @dag(
     dag_id="daily_to_s3",
     start_date=pendulum.datetime(2025, 10, 1, tz="Asia/Seoul"),
-    schedule_interval="0 8 * * *",  # 매일 오전 8:00 (KST) 실행
+    schedule_interval="@daily",
     catchup=False,
     tags=["daily", "s3"]
 )
 def total_pipeline():
-    # 전날 날짜 계산 (어제)
-    target_date="{{ (data_interval_end - macros.timedelta(days=1)).format('YYYYMMDD') }}"
+    # 실행일 날짜 그대로 사용
+    target_date = "{{ data_interval_end.strftime('%Y%m%d') }}"
     
     @task 
     def extract_and_transform(dt: str) -> dict:
