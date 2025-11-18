@@ -14,13 +14,13 @@ TABLE_NAME = "daily_boxoffice"
 @dag(
     dag_id="daily_s3_to_redshift",
     start_date=pendulum.datetime(2025, 10, 1, tz="Asia/Seoul"),
-    schedule_interval="10 8 * * *",
+    schedule_interval="@daily",
     catchup=False,
     tags=["redshift", "s3", "kobis"]
 )
 def daily_s3_to_redshift_pipeline():
-    # 전날 날짜 계산 (어제)
-    target_date = "{{ (data_interval_end - macros.timedelta(days=1)).format('YYYYMMDD') }}"
+    # 실행일 날짜 그대로 사용
+    target_date = "{{ data_interval_end.strftime('%Y%m%d') }}"
     
     @task
     def create_raw_data_schema():
@@ -51,16 +51,21 @@ def daily_s3_to_redshift_pipeline():
                 rank INTEGER,
                 rankInten INTEGER,
                 rankOldAndNew VARCHAR(10),
-                openDt VARCHAR(50),
+                movieCd VARCHAR(20),
+                movieNm VARCHAR(256),
+                openDt VARCHAR(20),
                 salesAmt BIGINT,
-                salesShare DECIMAL(18,2),  
+                salesShare DECIMAL(18,2),
                 salesInten BIGINT,
-                salesChange DECIMAL(18,2), 
+                salesChange DECIMAL(18,2),
                 salesAcc BIGINT,
                 audiCnt INTEGER,
-                audiChange DECIMAL(18,2),  
+                audiInten INTEGER,
+                audiChange DECIMAL(18,2),
+                audiAcc BIGINT,
                 scrnCnt INTEGER,
-                load_dt VARCHAR(50)
+                showCnt INTEGER,
+                load_dt VARCHAR(20)
             );
             """
             hook.run(create_table_sql)
