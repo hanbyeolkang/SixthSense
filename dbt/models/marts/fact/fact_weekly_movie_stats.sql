@@ -1,5 +1,4 @@
 -- 순위/매출/관객 데이터를 주차 단위로 분석
-
 WITH weekly AS (
     SELECT
         year_week_time,
@@ -24,7 +23,6 @@ WITH weekly AS (
         show_cnt
     FROM {{ ref('stg_weekly_boxoffice') }}
 )
-
 SELECT
     -- PK
     w.year_week_time,   -- 주차 기준 키
@@ -49,14 +47,13 @@ SELECT
     audi_change,    -- 관객 증감률(전주 대비 %)
     audi_acc,   -- 누적 관객수
     scrn_cnt,   -- 스크린 수
-    show_cnt    -- 상영 횟수
+    show_cnt,   -- 상영 횟수
     -- 기타 영화 속성
-    dm.main_genre,  -- 대표 장르
-    dm.main_nation, -- 대표 제작 국가
-    dm.director_main    -- 대표 감독
+    dm.genre_nm,  -- 대표 장르
+    dm.nation_nm -- 대표 제작 국가
 FROM weekly w
 LEFT JOIN {{ ref('dim_movie') }} dm
-    on w.movie_cd = dm.movie_cd;
+    on w.movie_cd = dm.movie_cd
 
 {% if is_incremental() %}
 WHERE w.year_week_time > (

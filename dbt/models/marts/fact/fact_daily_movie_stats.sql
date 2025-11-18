@@ -1,5 +1,4 @@
 -- 순위/매출/관객 데이터를 날짜 단위로 분석
-
 SELECT
     -- PK
     d.dt,               -- 박스오피스 일자
@@ -22,9 +21,8 @@ SELECT
     d.scrn_cnt, -- 상영 스크린 수
     d.show_cnt, -- 상영 횟수
     -- 기타 영화 속성
-    dm.main_genre,  -- 대표 장르
-    dm.main_nation, -- 대표 제작 국가
-    dm.director_main    -- 대표 감독
+    dm.genre_nm,  -- 대표 장르
+    dm.nation_nm -- 대표 제작 국가
 FROM {{ ref('stg_daily_boxoffice') }} d
 LEFT JOIN {{ ref('dim_movie') }} dm
     ON d.movie_cd = dm.movie_cd
