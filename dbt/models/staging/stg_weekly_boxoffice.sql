@@ -36,7 +36,7 @@ SELECT
     rank_old_and_new,   -- 신규/기존 여부
     movie_cd,   -- 영화 코드
     movie_nm,   -- 영화명
-    TRY_CAST(to_date(open_dt_raw, 'YYYYMMDD') AS date) AS open_dt,  -- 개봉일 DATE 변환
+    TO_DATE(TRIM(open_dt_raw), 'YYYY-MM-DD') AS open_dt,  -- 개봉일 DATE 변환
     sales_amt,  -- 매출액
     sales_share,    -- 매출 비중(%)
     sales_inten,    -- 매출 증감액
@@ -48,7 +48,7 @@ SELECT
     audi_acc,   -- 누적 관객수
     scrn_cnt,   -- 스크린 수
     show_cnt,   -- 상영 횟수
-    TRY_CAST(to_date(start_range_raw, 'YYYYMMDD') AS date) AS start_range,  -- 주차 시작일
-    TRY_CAST(to_date(end_range_raw,   'YYYYMMDD') AS date) AS end_range,    -- 주차 종료일
+    TO_DATE(start_range_raw, 'YYYY-MM-DD') AS start_range,  -- 주차 시작일
+    TO_DATE(end_range_raw, 'YYYY-MM-DD') AS end_range,    -- 주차 종료일
     TRY_CAST(load_dt AS date) AS load_dt    -- 데이터 적재일자
 FROM base

@@ -33,7 +33,7 @@ SELECT
     rank_old_and_new,   -- 신규/기존 여부
     movie_cd,   -- 영화 코드 (PK 조인 컬럼)
     movie_nm,   -- 영화 이름
-    TRY_CAST(to_date(open_dt_raw, 'YYYYMMDD') AS date) AS open_dt,  -- 개봉일
+    TO_DATE(TRIM(open_dt_raw), 'YYYY-MM-DD') AS open_dt,  -- 개봉일
     sales_amt,  -- 매출액
     sales_share,    -- 매출 비중(%)
     sales_inten,    -- 매출 증감액
