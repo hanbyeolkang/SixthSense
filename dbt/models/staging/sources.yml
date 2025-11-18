@@ -1,11 +1,11 @@
 version: 2
 
 sources:
-  - name: dailyBoxoffice # 원본 데이터 소스의 이름 (자유롭게 지정)
-    schema: raw_data # 원본 데이터가 있는 Redshift 스키마 이름 지정
+  - name: raw_data
+    schema: raw_data
     database: "{{ env_var('REDSHIFT_DB') }}" # Redshift DB 이름 (profiles.yml과 동일)
-    
-    # 현재 테이블이 없어서 일단 주석 처리
-    # tables:
-    #   - name: users_table # raw_data.users_table 이라는 테이블을 참조
-    #   - name: sales_table  # raw_data.sales_table 이라는 테이블을 참조
+
+    tables:
+      - name: daily_boxoffice
+      - name: weekly_boxoffice
+      - name: movie_details
