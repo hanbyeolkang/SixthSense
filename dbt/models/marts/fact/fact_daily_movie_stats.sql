@@ -22,7 +22,7 @@ SELECT
     d.scrn_cnt, -- 상영 스크린 수
     d.show_cnt, -- 상영 횟수
     -- 기타 영화 속성
-    dm.main_genre,  -- 대표 장르 (첫 번째 장르 또는 가중 기준)
+    dm.main_genre,  -- 대표 장르
     dm.main_nation, -- 대표 제작 국가
     dm.director_main    -- 대표 감독
 FROM {{ ref('stg_daily_boxoffice') }} d
