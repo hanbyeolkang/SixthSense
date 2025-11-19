@@ -11,7 +11,6 @@ import logging
 from datetime import datetime, timedelta
 from airflow.decorators import dag, task
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
-
 from airflow.models import Variable
 import requests
 from airflow.providers.postgres.hooks.postgres import PostgresHook
@@ -27,15 +26,12 @@ redshift_schema="raw_data"
 redshift_table="movie_details"
 REDSHIFT_IAM_ROLE = Variable.get("REDSHIFT_IAM_ROLE")
 
-weekGb="0" 
-# “0” : 주간 (월~일), “1” : 주말 (금~일) , “2” : 주중 (월~목)
-
 kobis_api_key=Variable.get('MOVIE_API_KEY')
-kobis_weekly_url="http://kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchWeeklyBoxOfficeList.json"
+kobis_daily_url="http://kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchDailyBoxOfficeList.json"
 kobis_detail_url="http://www.kobis.or.kr/kobisopenapi/webservice/rest/movie/searchMovieInfo.json"
 
 @dag(
-    dag_id="weekly_movieDetail_S3_Redshift",
+    dag_id="daily_movieDetail_S3_Redshift_v2",
     start_date=datetime(2025,10,1),
     schedule_interval="@daily",
     catchup=False
@@ -80,11 +76,11 @@ def daily_movieDetail_S3_Redshift():
     @task
     def get_daily_movie_list(target_dt):
         
-        params = {"key": kobis_api_key, "targetDt": target_dt, "weekGb": weekGb}
-        response=requests.get(kobis_weekly_url, params=params)
+        params = {"key": kobis_api_key, "targetDt": target_dt}
+        response=requests.get(kobis_daily_url, params=params)
         response.raise_for_status()
         data=response.json()   
-        movies=data.get("boxOfficeResult", {}).get("weeklyBoxOfficeList",[])
+        movies=data.get("boxOfficeResult", {}).get("dailyBoxOfficeList",[])
         movie_cds=[movie.get("movieCd") for movie in movies if movie.get("movieCd")]
         movie_cds = list(dict.fromkeys(movie_cds))  # preserve order, dedupe
         logging.info(f"API로부터 {len(movie_cds)}개의 영화코드 수신")
@@ -123,14 +119,14 @@ def daily_movieDetail_S3_Redshift():
         return new 
 
     @task
-    def fetch_details(movie_cds, target_dt):
+    def fetch_details(movie_cds):
 
         if not movie_cds:
             logging.info("업로드할 신규 영화 없음.")
             return []
         
         s3 = S3Hook(aws_conn_id=aws_conn_id)
-        s3_key_prefix = f"{s3_prefix}/{target_dt}"
+        
         uploaded_keys = []
 
         for movie_cd in movie_cds:
@@ -163,7 +159,7 @@ def daily_movieDetail_S3_Redshift():
                         "directors": movie_info.get("directors", []),
                         "actors": sliced_actors,
                     }
-                s3_key=f"{s3_key_prefix}/{movie_cd}.json" #copy 경로랑 일치할 것 
+                s3_key=f"{s3_prefix}/{movie_cd}.json" #copy 경로랑 일치할 것 
 
                 s3.load_string(
                     string_data=json.dumps(processed_data, ensure_ascii=False),
@@ -171,7 +167,8 @@ def daily_movieDetail_S3_Redshift():
                     bucket_name=s3_bucket,
                     replace=True
                 )
-                uploaded_keys.append(s3_key)
+                full_s3_path = f"s3://{s3_bucket}/{s3_key}"
+                uploaded_keys.append(full_s3_path)
                 logging.info(f"[{movie_cd}] 가공 완료. S3 저장 성공: s3://{s3_bucket}/{s3_key}")
             except Exception as e:
                 logging.error(f"[{movie_cd}] 처리 실패: {e}", exc_info=True)
@@ -182,17 +179,35 @@ def daily_movieDetail_S3_Redshift():
         return uploaded_keys
     
     @task
-    def load_to_redshift(s3_keys, target_dt):
-        if not s3_keys:
+    def load_to_redshift(s3_uris):
+        if not s3_uris:
             logging.info("업로드된 S3 파일 없음 -> Redshift 로드 건너뜀")
             return "skipped"
+        s3=S3Hook(aws_conn_id=aws_conn_id)
+
+        manifest_entries = [{"url": uri, "mandatory": True} for uri in s3_uris]
+        manifest_content = {"entries": manifest_entries}
         
-        s3_path=f"s3://{s3_bucket}/{s3_prefix}/{target_dt}/"
+        # 2. Manifest 파일을 S3 임시 경로에 저장 (매 실행마다 덮어써도 됨)
+        manifest_key = f"{s3_prefix}/_manifests/latest_load_manifest.json"
+
+        s3.load_string(
+            string_data=json.dumps(manifest_content),
+            key=manifest_key,
+            bucket_name=s3_bucket,
+            replace=True
+        )
+        logging.info(f"Manifest 생성 완료: {manifest_key}")
+
+        # 3. Redshift COPY 명령어 (MANIFEST 옵션 사용)
+        manifest_s3_path = f"s3://{s3_bucket}/{manifest_key}"
+        
         copy_sql=f"""
         copy {redshift_schema}.{redshift_table}
-        from '{s3_path}'
+        from '{manifest_s3_path}'
         IAM_ROLE '{REDSHIFT_IAM_ROLE}'
         format as json 'auto ignorecase'
+        MANIFEST
         truncatecolumns
         timeformat 'auto'
         region 'ap-northeast-2';
@@ -206,8 +221,8 @@ def daily_movieDetail_S3_Redshift():
     target_dt=get_target_date_str()
     daily_list = get_daily_movie_list(target_dt)    
     new_movies = find_new_movies(daily_list)
-    fetch_details_task=fetch_details(new_movies, target_dt)
-    load_result=load_to_redshift(fetch_details_task, target_dt)
+    fetch_details_task=fetch_details(new_movies)
+    load_result=load_to_redshift(fetch_details_task)
 
     create_table >> daily_list >> new_movies >> fetch_details_task >> load_result
 
