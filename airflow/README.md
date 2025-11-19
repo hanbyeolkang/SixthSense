@@ -14,4 +14,4 @@
     │
     ├── Dockerfile
     ├── requirements.txt
-    └── READE.md
+    └── README.md

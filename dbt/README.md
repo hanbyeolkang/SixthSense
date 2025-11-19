@@ -23,4 +23,4 @@
     │
     ├── dbt_project.yml
     ├── profiles.yml
-    └── READE.md
+    └── README.md
