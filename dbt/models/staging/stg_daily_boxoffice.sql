@@ -1,6 +1,6 @@
 -- 컬럼명 표준화(snake_case), 날짜 변환, 타입 캐스팅
 WITH base AS (
-    SELECT
+    SELECT DISTINCT
         boxofficetype    AS boxoffice_type,
         showrange        AS show_range,
         rnum,
@@ -21,7 +21,11 @@ WITH base AS (
         audiacc          AS audi_acc,
         scrncnt          AS scrn_cnt,
         showcnt          AS show_cnt,
-        load_dt
+        load_dt,
+        ROW_NUMBER() OVER (
+            PARTITION BY showrange, moviecd 
+            ORDER BY load_dt DESC
+        ) AS rn
     FROM {{ source('raw_data', 'daily_boxoffice') }}
 )
 SELECT
@@ -47,3 +51,4 @@ SELECT
     show_cnt,   -- 상영 횟수
     TRY_CAST(load_dt AS date) AS load_dt    -- 데이터 적재일자
 FROM base
+where rn = 1
