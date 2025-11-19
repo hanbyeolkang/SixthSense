@@ -93,11 +93,11 @@ def transform(df, load_dt):
 
 ## dag 
 @dag(
-    dag_id="daily_to_s3",
+    dag_id="daily_boxoffice_to_s3",
     start_date=pendulum.datetime(2025, 10, 1, tz="Asia/Seoul"),
     schedule_interval="@daily",
     catchup=False,
-    tags=["daily", "s3"]
+    tags=["daily_boxoffice", "s3"]
 )
 def total_pipeline():
     # 실행일 날짜 그대로 사용

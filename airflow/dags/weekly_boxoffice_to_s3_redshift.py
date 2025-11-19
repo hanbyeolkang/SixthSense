@@ -114,10 +114,11 @@ SCHEMA_NAME="raw_data"
 REDSHIFT_IAM_ROLE = Variable.get("REDSHIFT_IAM_ROLE")
 
 @dag(
-    dag_id="weekly_to_s3_Redshift",
+    dag_id="weekly_boxoffice_to_s3_redshift",
     start_date=pendulum.datetime(2025,10,1,tz="Asia/Seoul"),
     schedule="@daily",
-    catchup=False
+    catchup=False,
+    tags=["weekly_boxoffice", "s3", "redshift"]
 )
 
 def total_pipeline():

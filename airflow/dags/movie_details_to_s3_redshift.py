@@ -31,10 +31,11 @@ kobis_daily_url="http://kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searc
 kobis_detail_url="http://www.kobis.or.kr/kobisopenapi/webservice/rest/movie/searchMovieInfo.json"
 
 @dag(
-    dag_id="daily_movieDetail_S3_Redshift_v2",
+    dag_id="movie_details_to_s3_redshift",
     start_date=datetime(2025,10,1),
     schedule_interval="@daily",
-    catchup=False
+    catchup=False,
+    tags=["movie_details", "s3", "redshift"]
 )
 
 def daily_movieDetail_S3_Redshift():

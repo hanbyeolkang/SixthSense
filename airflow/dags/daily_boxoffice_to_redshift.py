@@ -12,11 +12,11 @@ SCHEMA_NAME = "raw_data"
 TABLE_NAME = "daily_boxoffice"
 
 @dag(
-    dag_id="daily_s3_to_redshift",
+    dag_id="daily_boxoffice_to_redshift",
     start_date=pendulum.datetime(2025, 10, 1, tz="Asia/Seoul"),
     schedule_interval="10 8 * * *",
     catchup=False,
-    tags=["redshift", "s3", "kobis"]
+    tags=["daily_boxoffice", "redshift"]
 )
 def daily_s3_to_redshift_pipeline():
     # 실행일 날짜 그대로 사용
