@@ -76,8 +76,10 @@ airflow-init 실행 종료 후, airflow-webserver 가 실행되면 설정
     │   └── README.md
     │ 
     ├── superset/       # Superset 관련
+    │   ├── images/
     │   ├── Dockerfile
-    │   └── superset_config.py 
+    │   ├── superset_config.py
+    │   └── README.md
     │
     ├── .env
     ├── .gitignore
